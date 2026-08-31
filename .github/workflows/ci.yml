@@ -27,6 +27,8 @@ jobs:
           context: ./backend
           push: false
           tags: backend:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -48,3 +50,5 @@ jobs:
           context: ./frontend
           push: false
           tags: frontend:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
