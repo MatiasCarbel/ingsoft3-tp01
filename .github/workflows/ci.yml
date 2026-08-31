@@ -1,45 +1,57 @@
-build-backend:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Qué estamos verificando
-      env:
-        RAMA: ${{ github.head_ref || github.ref_name }}
-      run: echo "Rama $RAMA · commit $GITHUB_SHA"
+name: CI
 
-    - name: Bajar el código al runner
-      uses: actions/checkout@v4
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
 
-    - name: Preparar el constructor que sabe cachear
-      uses: docker/setup-buildx-action@v3
+permissions:
+  actions: write
 
-    - name: Construir la imagen del backend
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        push: false
-        tags: backend:ci
-        cache-from: type=gha,scope=backend
-        cache-to: type=gha,mode=min,scope=backend  # Changed from mode=max
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Qué estamos verificando
+        env:
+          RAMA: ${{ github.head_ref || github.ref_name }}
+        run: echo "Rama $RAMA · commit $GITHUB_SHA"
 
-build-frontend:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Qué estamos verificando
-      env:
-        RAMA: ${{ github.head_ref || github.ref_name }}
-      run: echo "Rama $RAMA · commit $GITHUB_SHA"
+      - name: Bajar el código al runner
+        uses: actions/checkout@v4
 
-    - name: Bajar el código al runner
-      uses: actions/checkout@v4
+      - name: Preparar el constructor que sabe cachear
+        uses: docker/setup-buildx-action@v3
 
-    - name: Preparar el constructor que sabe cachear
-      uses: docker/setup-buildx-action@v3
+      - name: Construir la imagen del backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: backend:ci
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
-    - name: Construir la imagen del frontend
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        push: false
-        tags: frontend:ci
-        cache-from: type=gha,scope=frontend
-        cache-to: type=gha,mode=min,scope=frontend  # Changed from mode=max
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Qué estamos verificando
+        env:
+          RAMA: ${{ github.head_ref || github.ref_name }}
+        run: echo "Rama $RAMA · commit $GITHUB_SHA"
+
+      - name: Bajar el código al runner
+        uses: actions/checkout@v4
+
+      - name: Preparar el constructor que sabe cachear
+        uses: docker/setup-buildx-action@v3
+
+      - name: Construir la imagen del frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: frontend:ci
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
