@@ -20,7 +20,7 @@
 
 *La release `v1.0.0` publicada correctamente en el repositorio.*
 
-#Evidencias TP2
+# Evidencias TP2
 ## docker compose up -d desde cero y el sistema funcionando end-to-end,
 <img width="1860" height="376" alt="Screenshot from 2026-08-31 14-27-38" src="https://github.com/user-attachments/assets/9e5dad54-7620-4099-86d5-a9fd8ffc55a9" />
 <img width="836" height="493" alt="Screenshot from 2026-08-31 14-29-38" src="https://github.com/user-attachments/assets/ca0b8d0a-93af-4074-8d13-63f7ce980ae7" />
