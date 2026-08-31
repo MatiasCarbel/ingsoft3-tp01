@@ -24,16 +24,21 @@
 ## docker compose up -d desde cero y el sistema funcionando end-to-end,
 ![alt text](image.png)
 ![alt text](image-2.png)
+Se demuestra el levantamiento del sistema completo mediante docker compose up -d desde cero. Los contenedores de frontend, backend y la base de datos se encuentran en ejecución, y la aplicación web es capaz de registrar un paciente exitosamente, confirmando la correcta comunicación entre los tres servicios.
 
 ## la prueba de persistencia (down / up conserva datos; down -v los limpia),
 ![alt text](image-3.png)
 ![alt text](image-4.png)
+Al ejecutar docker compose down y luego volver a levantar los servicios con docker compose up -d, el registro del paciente creado anteriormente se conserva intacto. Esto comprueba que los datos sobreviven a la destrucción de los contenedores gracias a la correcta configuración del volumen nombrado (db_data)
 
 ![alt text](image-5.png)
 ![alt text](image-6.png)
+Al ejecutar docker compose down -v, se destruyen explícitamente tanto los contenedores como los volúmenes asociados. Al levantar el sistema nuevamente, la lista de pacientes se muestra vacía, demostrando que la base de datos se inicializó desde cero al no encontrar su volumen.
 
 ## comparación de tamaño imagen final vs imagen de SDK,
 ![alt text](image-8.png)
+En la siguiente captura se comprueba la eficiencia de los Dockerfiles multi-stage. Se observa cómo la imagen base del SDK utilizada para compilar el frontend (node:22-alpine) pesa considerablemente más que la imagen mínima de ejecución (nginx:alpine) y que nuestra imagen final de producción. 
 
 ## las imágenes publicadas en el registry.
 ![alt text](image-9.png)
+Publicación exitosa de las imágenes del backend y frontend en GitHub Container Registry (ghcr.io).
