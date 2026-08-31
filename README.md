@@ -1,7 +1,10 @@
 # Proyecto IngSoft3 - versión B
 
 # Proyecto IngSoft3 - versión A
+
 ## Instalación
+
+git clone git@github.com:MatiasCarbel/ingsoft3-tp01.git
 
 # TP-2
 # Clínica App - Sistema de Turnos

@@ -20,3 +20,20 @@
 
 *La release `v1.0.0` publicada correctamente en el repositorio.*
 
+#Evidencias TP2
+## docker compose up -d desde cero y el sistema funcionando end-to-end,
+![alt text](image.png)
+![alt text](image-2.png)
+
+## la prueba de persistencia (down / up conserva datos; down -v los limpia),
+![alt text](image-3.png)
+![alt text](image-4.png)
+
+![alt text](image-5.png)
+![alt text](image-6.png)
+
+## comparación de tamaño imagen final vs imagen de SDK,
+![alt text](image-8.png)
+
+## las imágenes publicadas en el registry.
+![alt text](image-9.png)
