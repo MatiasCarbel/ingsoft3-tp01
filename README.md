@@ -1,3 +1,6 @@
+
+[![CI](https://github.com/MatiasCarbel/ingsoft3-tp01/actions/workflows/ci.yml/badge.svg)](https://github.com/MatiasCarbel/ingsoft3-tp01/actions/workflows/ci.yml)
+
 # Proyecto IngSoft3 - versión B
 
 # Proyecto IngSoft3 - versión A
@@ -16,3 +19,4 @@ git clone git@github.com:MatiasCarbel/ingsoft3-tp01.git
 3. Levantar los contenedores en segundo plano:
    `docker compose up -d`
 4. Acceder a la aplicación en `http://localhost:3000`.
+
