@@ -83,4 +83,4 @@ jobs:
 
       - name: Correr los tests del frontend con coverage
         run: |
-          docker run --rm -e
+          docker run --rm -e COVERAGE_DIR=/salida/reporte -v "${{ github.workspace }}/frontend-coverage:/salida" frontend-test:ci
