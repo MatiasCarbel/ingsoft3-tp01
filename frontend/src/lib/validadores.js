@@ -21,3 +21,10 @@ export function calcularPrioridadTurno(edad, esUrgencia) {
   if (edad < 65 && esUrgencia) return 'NARANJA';
   return 'VERDE';
 }
+
+export function calcularCosto(obraSocial) {
+  if (obraSocial === 'OSDE') return 2000;
+  if (obraSocial === 'SWISS') return 2500;
+  if (obraSocial === 'PAMI') return 0;
+  return 5000;
+}
