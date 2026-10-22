@@ -31,6 +31,19 @@ jobs:
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
 
+      - name: Construir la etapa de tests del backend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          target: test
+          load: true
+          push: false
+          tags: backend-test:ci
+
+      - name: Correr los tests del backend con coverage
+        run: |
+          docker run --rm -v "${{ github.workspace }}/TestResults:/out" backend-test:ci
+
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -53,3 +66,16 @@ jobs:
           tags: frontend:ci
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+      
+      - name: Construir la etapa de tests del frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          target: test
+          load: true
+          push: false
+          tags: frontend-test:ci
+
+      - name: Correr los tests del frontend con coverage
+        run: |
+          docker run --rm -e COVERAGE_DIR=/salida/reporte -v "${{ github.workspace }}/frontend-coverage:/salida" frontend-test:ci

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import models, schemas
 from database import engine, get_db
+from validadores import validar_dni, validar_telefono, validar_fecha_turno, ValidacionError
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -24,13 +25,13 @@ def read_root():
 # --- PACIENTES ---
 @app.post("/pacientes/", response_model=schemas.PacienteResponse)
 def crear_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_db)):
-    # Validar DNI (Solo números y entre 7 y 8 caracteres)
-    if not paciente.dni.isdigit() or not (7 <= len(paciente.dni) <= 8):
-        raise HTTPException(status_code=400, detail="El DNI debe tener 7 u 8 números")
-    
-    # Validar Teléfono (Solo números y exactamente 10 caracteres)
-    if paciente.telefono and (not paciente.telefono.isdigit() or len(paciente.telefono) != 10):
-        raise HTTPException(status_code=400, detail="El teléfono debe tener exactamente 10 números (código de área + número)")
+    # Usamos la lógica pura de validadores.py
+    try:
+        validar_dni(paciente.dni)
+        if paciente.telefono:
+            validar_telefono(paciente.telefono)
+    except ValidacionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     db_paciente = db.query(models.Paciente).filter(models.Paciente.dni == paciente.dni).first()
     if db_paciente:
@@ -41,6 +42,7 @@ def crear_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_d
     db.commit()
     db.refresh(nuevo_paciente)
     return nuevo_paciente
+
 @app.get("/pacientes/", response_model=list[schemas.PacienteResponse])
 def listar_pacientes(db: Session = Depends(get_db)):
     return db.query(models.Paciente).all()
@@ -65,8 +67,10 @@ def turnos_por_medico(medico_id: int, db: Session = Depends(get_db)):
 # --- TURNOS ---
 @app.post("/turnos/", response_model=schemas.TurnoResponse)
 def agendar_turno(turno: schemas.TurnoCreate, db: Session = Depends(get_db)):
-    if turno.fecha_hora < datetime.now():
-        raise HTTPException(status_code=400, detail="La fecha del turno no puede ser en el pasado")
+    try:
+        validar_fecha_turno(turno.fecha_hora)
+    except ValidacionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     if not db.query(models.Paciente).filter(models.Paciente.id == turno.paciente_id).first():
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
@@ -90,7 +94,6 @@ def eliminar_turno(turno_id: int, db: Session = Depends(get_db)):
     if not turno:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
     
-    # REGLA DE NEGOCIO: Solo se pueden eliminar turnos en el futuro
     if turno.fecha_hora <= datetime.now():
         raise HTTPException(status_code=400, detail="No se pueden eliminar turnos que ya pasaron")
          
