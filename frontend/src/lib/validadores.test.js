@@ -1,6 +1,6 @@
 // frontend/src/lib/validadores.test.js
 import { describe, expect, it, vi } from 'vitest';
-import { validarPaciente } from './validadores.js';
+import { validarPaciente, calcularPrioridadTurno } from './validadores.js';
 import { registrarPaciente } from '../api/pacientesService.js';
 
 describe('validadores y api de pacientes', () => {
@@ -36,5 +36,12 @@ describe('validadores y api de pacientes', () => {
 
     // Assert: Verificamos la INTERACCIÓN (¿Se llamó a la API con la URL y los datos correctos?)
     expect(clienteApiMock.post).toHaveBeenCalledWith('/pacientes/', paciente);
+  });
+
+  it('calcula la prioridad de los turnos correctamente', () => {
+    expect(calcularPrioridadTurno(70, true)).toBe('ROJO');
+    expect(calcularPrioridadTurno(70, false)).toBe('AMARILLO');
+    expect(calcularPrioridadTurno(30, true)).toBe('NARANJA');
+    expect(calcularPrioridadTurno(30, false)).toBe('VERDE');
   });
 });
