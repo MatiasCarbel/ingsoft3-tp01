@@ -1,0 +1,6 @@
+[run]
+omit =
+    main.py
+    models.py
+    schemas.py
+    database.py
