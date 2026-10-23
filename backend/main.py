@@ -100,3 +100,7 @@ def eliminar_turno(turno_id: int, db: Session = Depends(get_db)):
     db.delete(turno)
     db.commit()
     return {"mensaje": "Turno eliminado con éxito"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}

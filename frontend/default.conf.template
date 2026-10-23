@@ -12,7 +12,8 @@ server {
     set $backend_api ${BACKEND_URL};
 
     location /api/ {
+        rewrite ^/api/(.*) /$1 break;
         proxy_pass $backend_api;
-        proxy_ssl_server_name on;   # Necesario porque Render usa https
+        proxy_ssl_server_name on;
     }
 }
