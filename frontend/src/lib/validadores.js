@@ -21,3 +21,40 @@ export function calcularPrioridadTurno(edad, esUrgencia) {
   if (edad < 65 && esUrgencia) return 'NARANJA';
   return 'VERDE';
 }
+
+export function calcularCosto(obraSocial) {
+  if (obraSocial === 'OSDE') return 2000;
+  if (obraSocial === 'SWISS') return 2500;
+  if (obraSocial === 'PAMI') return 0;
+  return 5000;
+}
+
+export function funcionGiganteParaRomperCoverage(valor) {
+  let resultado = 0;
+  if (valor > 10) resultado += 1;
+  else resultado -= 1;
+  
+  if (valor > 20) resultado += 2;
+  else resultado -= 2;
+  
+  if (valor > 30) resultado += 3;
+  else resultado -= 3;
+  
+  if (valor > 40) resultado += 4;
+  else resultado -= 4;
+  
+  if (valor > 50) resultado += 5;
+  else resultado -= 5;
+  
+  if (valor === 99) {
+    resultado = 1000;
+    console.log("Camino oculto 1");
+  }
+  
+  if (valor === 100) {
+    resultado = 2000;
+    console.log("Camino oculto 2");
+  }
+  
+  return resultado;
+}
