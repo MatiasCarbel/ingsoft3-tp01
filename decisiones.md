@@ -1,3 +1,17 @@
+# Enlaces de este TP
+
+*1. Paquetes Públicos en el Registry:*
+- Imagen Frontend: [FRONTEND](https://github.com/MatiasCarbel/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend)
+- Imagen Backend: [BACKEND](https://github.com/MatiasCarbel/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend)
+
+*2. Evidencia de la Cadena de Publicación:*
+- Corrida de un PR: [PULL REQUEST RUN](https://github.com/MatiasCarbel/ingsoft3-tp01/actions/runs/40052094763)
+- Corrida de la rama main: [RUN](https://github.com/MatiasCarbel/ingsoft3-tp01/actions/runs/40052178637)
+
+*3. Entornos Vivos (Render):*
+- URL Frontend QA: [FRONTEND-QA](https://tp01-front-qa.onrender.com)
+- URL Frontend PROD: [FRONTEND-PROD](https://tp01-front-prod.onrender.com)
+
 # Decisiones — TP1
 
 ## 1. Sobre el conflicto de merge
@@ -80,4 +94,51 @@ Utilicé a Gemini como asistente técnico. Me ayudó a:
 1. Configurar las banderas correctas de Pytest/Vitest en los Dockerfiles.
 2. Resolver el error de inyección de variable de base de datos (`DATABASE_URL`) falsa para que SQLAlchemy no rompa el CI en GitHub Actions.
 3.Armado del decisiones.md.
+
 Verifiqué localmente cada test ejecutando `pytest` y `npm run test:ci` e interpretando los logs antes de cada commit.
+
+
+# TP6 - Continuous Delivery: Environments, Aprobaciones y Deployment Patterns
+
+## 1. El Artefacto y el Registry
+El artefacto se publica **solo** cuando la verificación del pipeline de CI pasa a estado verde. Si el pipeline publicara la imagen incluso con los tests rotos, el registry dejaría de ser una garantía de calidad; se convertiría simplemente en un depósito de construcciones fallidas. Esta garantía no está hecha con un `if` de estado, sino que depende del **orden de los pasos**: construir y publicar es el último paso del *job*. Si los tests fallan antes, el proceso se interrumpe y nunca se llega a la publicación.
+
+## 2. Continuous Delivery vs. Continuous Deployment
+En este trabajo implementé **Continuous Delivery (Entrega Continua)**. Cada código integrado pasa de forma automática a QA, pero su pase a Producción está frenado por una aprobación manual humana. Para este contexto es lo correcto, ya que el despliegue a PROD deja de ser un evento puramente técnico y se convierte en una decisión de negocio, dándome la oportunidad de revisar que todo funcione bien en el entorno de pruebas antes de impactar a los usuarios finales.
+
+## 3. Diseño de la Cadena y Alcance de Secrets
+El pipeline modela la promoción utilizando la sintaxis `needs:` para encadenar *jobs* de forma secuencial y `if: github.ref == 'refs/heads/main'` para bloquear los despliegues en Pull Requests, asegurando que solo el código integrado avance. 
+En cuanto a los secretos, utilicé **Environment Secrets**. Los hooks de QA solo existen para el entorno `qa`, y los de PROD están encapsulados en `production`. Así, aplico el principio de mínimo privilegio: el código que no cuenta con aprobación hacia PROD no tiene visibilidad física de las credenciales para desplegar en ese entorno.
+
+## 4. Criterios de Aprobación (Gate Humano)
+Antes de aprobar un pase a Producción, como responsable reviso:
+1. Que QA haya finalizado su despliegue y su correspondiente *smoke test* esté en verde.
+2. Qué tipo de cambios trae el commit: si hay modificaciones en las variables de entorno o la conexión a la BD, requiere revisión manual extra.
+3. El estado del equipo o del servicio (por ejemplo, evitar aprobar si otro desarrollador está a punto de mergear otro PR para no pisar versiones).
+
+## 5. Letra Chica del Free Tier y Limitaciones
+El free tier de Render impone límites estrictos: los servicios se duermen ("idle") tras 15 minutos sin tráfico, y cuando reciben un request tienen un *cold start* de casi 1 minuto. Mi pipeline maneja esto dentro del *smoke test*, ejecutando bucles (`for` con `sleep 20`) que reintentan hasta 30 veces. Además, agrego `--max-time 10` al comando `curl` para evitar que el job quede colgado eternamente esperando la respuesta inicial.
+
+## 6. La Reconstrucción en Render (Limitación de Garantía)
+Actualmente, el hook que usamos le pide a Render que **vuelva a construir** la aplicación desde el repositorio. Esto rompe parcialmente la promesa de promover "lo mismo que se verificó", porque lo que termina corriendo en QA y PROD no es mi imagen verificada del registry, sino un nuevo *build*. Si una imagen base o dependencia externa cambia entre un *build* y otro, la versión en PROD podría diferir de la de QA.
+
+## 7. Qué prueba y qué no prueba el Smoke Test
+El *smoke test* prueba que el proceso levantó correctamente (`/health`), que hay conexión con la base de datos (con una ruta de la API) y que el Nginx está sirviendo la web. Sin embargo, **no prueba qué versión está corriendo**. Como el hook de Render responde instantáneamente y buildea en segundo plano, el curl del *smoke test* puede dar verde contra la versión antigua si se ejecuta antes de que termine el despliegue real.
+
+## 8. Estrategia de Despliegue y Plan de Rollback
+Para un escenario de producción real con usuarios activos, elegiría implementar el patrón **Blue-Green Deployment**. 
+
+**¿Por qué esta estrategia?**
+- **Riesgo y Rollback:** Actualmente nuestro despliegue en Render tiene un *cold start* y un pequeño downtime mientras se levanta el contenedor. Con Blue-Green, tendríamos dos entornos idénticos (Azul y Verde). Desplegamos la nueva versión en el Verde, le corremos tests exhaustivos, y si todo está bien, simplemente cambiamos el enrutador/balanceador de carga para que apunte al Verde. El downtime es cero. Si algo falla, el **rollback es instantáneo**: solo volvemos a apuntar el router al entorno Azul.
+- **Costo:** El costo de infraestructura es mayor (requiere pagar el doble de servidores, al menos durante la ventana de despliegue), pero se justifica totalmente por la disponibilidad y la seguridad que le da al negocio.
+- **Observabilidad que nos falta hoy:** Actualmente solo tenemos un *smoke test* ciego que hace un `curl` y espera un código HTTP 200. Para hacer Blue-Green o Canary de verdad, nos falta monitoreo real (métricas DORA, etc) para medir latencia, consumo de CPU y tasa de errores (ej. cantidad de HTTP 500) en el entorno Verde antes de decidir apagar el Azul. También requeriría que las migraciones de nuestra Base de Datos sean siempre retrocompatibles, ya que ambos entornos compartirían la misma BD de Producción durante el cambio.
+
+**Mi Plan de Rollback:**
+Si un despliegue en PROD falla, el plan de acción es volver a la versión segura anterior:
+1. Busco el SHA del último deploy exitoso en la pestaña *Deployments* de GitHub.
+2. Desde mi terminal local, disparo manualmente los dos Deploy Hooks de Render (API y Front de PROD) pasándoles el parámetro `&ref=$SHA_ANTERIOR`. (Ej: curl -fsS "https://api.render.com/deploy/HOOK_API_PROD&ref=EL_SHA_ANTERIOR" y curl -fsS "https://api.render.com/deploy/HOOK_FRONT_PROD&ref=EL_SHA_ANTERIOR")
+3. Según la prueba que cronometré en la solapa *Deploys* de Render, este rollback tarda **37.1s** segundos en figurar como "Live".
+
+
+## 9. Declaración de Uso de IA
+Utilicé IA para comprender el uso de las plantillas `.template` en Nginx (variables de entorno dinámicas), depurar errores 502/404 generados por fallos en el proxy, y estructurar sintácticamente los jobs del `ci.yml`. Todo el código y los pasos proporcionados fueron comprobados mediante pruebas manuales en la consola de Render y verificando las corridas de Actions en mi repositorio.
