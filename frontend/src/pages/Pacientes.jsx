@@ -54,7 +54,7 @@ export default function Pacientes() {
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc' }}>
         <h3>Nuevo Paciente</h3>
         <form onSubmit={registrarPaciente} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <input aria-label="Nombre ROTO" type="text" placeholder="Nombre" required value={nuevoPaciente.nombre} onChange={(e) => setNuevoPaciente({...nuevoPaciente, nombre: e.target.value})} />
+          <input aria-label="Nombre del paciente" type="text" placeholder="Nombre" required value={nuevoPaciente.nombre} onChange={(e) => setNuevoPaciente({...nuevoPaciente, nombre: e.target.value})} />
           <input aria-label="Apellido del paciente" type="text" placeholder="Apellido" required value={nuevoPaciente.apellido} onChange={(e) => setNuevoPaciente({...nuevoPaciente, apellido: e.target.value})} />
           <input aria-label="DNI del paciente" type="text" placeholder="DNI" required value={nuevoPaciente.dni} onChange={(e) => setNuevoPaciente({...nuevoPaciente, dni: e.target.value})} />
           <input aria-label="Teléfono del paciente" type="text" placeholder="Teléfono" value={nuevoPaciente.telefono} onChange={(e) => setNuevoPaciente({...nuevoPaciente, telefono: e.target.value})} />
