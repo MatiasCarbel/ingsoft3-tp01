@@ -17,3 +17,6 @@ Thumbs.db
 
 backend/venv/
 backend/__pycache__/
+
+playwright-report/
+test-results/

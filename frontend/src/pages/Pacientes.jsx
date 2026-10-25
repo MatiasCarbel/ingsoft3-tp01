@@ -13,11 +13,19 @@ export default function Pacientes() {
     setPacientes(respuesta.data);
   };
 
-const registrarPaciente = async (e) => {
+  const eliminarPaciente = async (id) => {
+    try {
+      await api.delete(`/pacientes/${id}`);
+      cargarPacientes();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const registrarPaciente = async (e) => {
     e.preventDefault();
     setError('');
     
-    // Validación Frontend: DNI y Teléfono
     const regexNumeros = /^[0-9]+$/;
     
     if (!regexNumeros.test(nuevoPaciente.dni) || nuevoPaciente.dni.length < 7 || nuevoPaciente.dni.length > 8) {
@@ -46,17 +54,17 @@ const registrarPaciente = async (e) => {
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc' }}>
         <h3>Nuevo Paciente</h3>
         <form onSubmit={registrarPaciente} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <input type="text" placeholder="Nombre" required value={nuevoPaciente.nombre} onChange={(e) => setNuevoPaciente({...nuevoPaciente, nombre: e.target.value})} />
-          <input type="text" placeholder="Apellido" required value={nuevoPaciente.apellido} onChange={(e) => setNuevoPaciente({...nuevoPaciente, apellido: e.target.value})} />
-          <input type="number" placeholder="DNI" required value={nuevoPaciente.dni} onChange={(e) => setNuevoPaciente({...nuevoPaciente, dni: e.target.value})} />
-          <input type="text" placeholder="Teléfono" value={nuevoPaciente.telefono} onChange={(e) => setNuevoPaciente({...nuevoPaciente, telefono: e.target.value})} />
-          <button type="submit">Guardar</button>
+          <input aria-label="Nombre del paciente" type="text" placeholder="Nombre" required value={nuevoPaciente.nombre} onChange={(e) => setNuevoPaciente({...nuevoPaciente, nombre: e.target.value})} />
+          <input aria-label="Apellido del paciente" type="text" placeholder="Apellido" required value={nuevoPaciente.apellido} onChange={(e) => setNuevoPaciente({...nuevoPaciente, apellido: e.target.value})} />
+          <input aria-label="DNI del paciente" type="text" placeholder="DNI" required value={nuevoPaciente.dni} onChange={(e) => setNuevoPaciente({...nuevoPaciente, dni: e.target.value})} />
+          <input aria-label="Teléfono del paciente" type="text" placeholder="Teléfono" value={nuevoPaciente.telefono} onChange={(e) => setNuevoPaciente({...nuevoPaciente, telefono: e.target.value})} />
+          <button type="submit" aria-label="Guardar paciente">Guardar</button>
         </form>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {error && <p role="alert" style={{ color: 'red' }}>{error}</p>}
       </div>
 
       <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr><th>ID</th><th>Nombre y Apellido</th><th>DNI</th><th>Teléfono</th></tr></thead>
+        <thead><tr><th>ID</th><th>Nombre y Apellido</th><th>DNI</th><th>Teléfono</th><th>Acciones</th></tr></thead>
         <tbody>
           {pacientes.map(pac => (
             <tr key={pac.id}>
@@ -64,6 +72,9 @@ const registrarPaciente = async (e) => {
               <td>{pac.nombre} {pac.apellido}</td>
               <td>{pac.dni}</td>
               <td>{pac.telefono}</td>
+              <td>
+                <button aria-label={`Borrar ${pac.nombre}`} onClick={() => eliminarPaciente(pac.id)}>Borrar</button>
+              </td>
             </tr>
           ))}
         </tbody>
