@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('crear un paciente lo muestra en la lista, y borrarlo lo saca', async ({ page }) => {
-  await page.goto('/pacientes')
+  await page.goto('/')
   const nombreUnico = `e2e ${Date.now()}`
   const dniUnico = `${Date.now()}`.slice(-8)
 
@@ -23,7 +23,7 @@ test('crear un paciente lo muestra en la lista, y borrarlo lo saca', async ({ pa
 })
 
 test('un DNI corto muestra el error y no crea nada', async ({ page }) => {
-  await page.goto('/pacientes')
+  await page.goto('/')
   const nombreUnico = `fail ${Date.now()}`
   
   await page.getByLabel('Nombre del paciente').fill(nombreUnico)
@@ -37,6 +37,6 @@ test('un DNI corto muestra el error y no crea nada', async ({ page }) => {
 })
 
 test('la carga inicial muestra el título de Gestión de Pacientes', async ({ page }) => {
-  await page.goto('/pacientes')
+  await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Gestión de Pacientes' })).toBeVisible()
 })
