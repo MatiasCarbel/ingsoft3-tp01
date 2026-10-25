@@ -1,51 +1,115 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
+    branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   build-backend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Iniciar sesión en GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Qué estamos verificando
+        env:
+          RAMA: ${{ github.head_ref || github.ref_name }}
+        run: echo "Rama $RAMA · commit $GITHUB_SHA"
+
+      - name: Bajar el código al runner
+        uses: actions/checkout@v6
+
+      - name: Preparar el constructor que sabe cachear
+        uses: docker/setup-buildx-action@v4
+
+      # (El build viejo que estaba acá se fue al final)
+
+      # --- QUALITY GATE BACKEND ---
+      - name: Construir la etapa de tests del backend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          target: test
+          load: true
+          push: false
+          tags: backend-test:ci
+          cache-from: type=gha,scope=backend-test
+          cache-to: type=gha,mode=max,scope=backend-test
+
+      - name: Correr los tests del backend con coverage
+        run: docker run --rm -e DATABASE_URL="sqlite:///./dummy.db" -v "${{ github.workspace }}/TestResults:/out" backend-test:ci
+
+      # --- NUEVO TP6: PUBLICAR ARTEFACTO ---
+      - name: Entrar al registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Construir y publicar la imagen del backend
-        uses: docker/build-push-action@v5
+      - name: Construir y publicar la imagen final del backend
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ghcr.io/matiascarbel/ingsoft3-tp01-backend:sha-${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
   build-frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Iniciar sesión en GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Qué estamos verificando
+        env:
+          RAMA: ${{ github.head_ref || github.ref_name }}
+        run: echo "Rama $RAMA · commit $GITHUB_SHA"
+
+      - name: Bajar el código al runner
+        uses: actions/checkout@v6
+
+      - name: Preparar el constructor que sabe cachear
+        uses: docker/setup-buildx-action@v4
+
+      # (El build viejo que estaba acá se fue al final)
+
+      # --- QUALITY GATE FRONTEND ---
+      - name: Construir la etapa de tests del frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          target: test
+          load: true
+          push: false
+          tags: frontend-test:ci
+          cache-from: type=gha,scope=frontend-test
+          cache-to: type=gha,mode=max,scope=frontend-test
+
+      - name: Correr los tests del frontend con coverage
+        run: docker run --rm -e COVERAGE_DIR=/salida/reporte -v "${{ github.workspace }}/frontend-coverage:/salida" frontend-test:ci
+
+      # --- NUEVO TP6: PUBLICAR ARTEFACTO ---
+      - name: Entrar al registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Construir y publicar la imagen del frontend
-        uses: docker/build-push-action@v5
+      - name: Construir y publicar la imagen final del frontend
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ghcr.io/matiascarbel/ingsoft3-tp01-frontend:sha-${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
   deploy-qa:
     runs-on: ubuntu-latest
@@ -53,64 +117,59 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment: qa
     steps:
-      - name: Desplegar en QA la IMAGEN del commit (api + front)
-        shell: bash
+      - name: Disparar deploy en Render (QA)
         env:
           HOOK_API: ${{ secrets.RENDER_HOOK_API_QA }}
           HOOK_FRONT: ${{ secrets.RENDER_HOOK_FRONT_QA }}
         run: |
-          IMG_API="ghcr.io/matiascarbel/ingsoft3-tp01-backend:sha-${{ github.sha }}"
-          IMG_FRONT="ghcr.io/matiascarbel/ingsoft3-tp01-frontend:sha-${{ github.sha }}"
-          curl -fsS --max-time 30 --get --data-urlencode "imgURL=$IMG_API" "$HOOK_API"
-          curl -fsS --max-time 30 --get --data-urlencode "imgURL=$IMG_FRONT" "$HOOK_FRONT"
+          curl -fsS --max-time 30 "$HOOK_API&ref=$GITHUB_SHA"
+          curl -fsS --max-time 30 "$HOOK_FRONT&ref=$GITHUB_SHA"
 
-      - name: Smoke test QA
+      - name: Smoke test (espera a que QA conteste)
         shell: bash
         env:
+          # REEMPLAZÁ ESTAS DOS URLs POR LAS TUYAS DE RENDER
           URL_API: https://tp01-api-qa.onrender.com
           URL_FRONT: https://tp01-front-qa.onrender.com
         run: |
+          echo "Esperando a que QA esté vivo..."
           for i in $(seq 1 30); do
-            if curl -fsS --max-time 10 "$URL_API/health" > /dev/null \
-               && curl -fsS --max-time 10 "$URL_API/api/pacientes" > /dev/null \
+            if curl -fsS --max-time 10 "$URL_API/health" \
+               && curl -fsS --max-time 10 "$URL_API/pacientes/" > /dev/null \
                && curl -fsS --max-time 10 "$URL_FRONT/" > /dev/null; then
-              echo "✅ QA responde"
-              exit 0
+              echo "✅ QA responde (API + BD + front)"; exit 0
             fi
             sleep 20
           done
-          echo "❌ QA no respondió"; exit 1
+          echo "❌ QA no respondió a tiempo"; exit 1
 
   deploy-prod:
     runs-on: ubuntu-latest
     needs: deploy-qa
-    environment: production
-    concurrency: { group: deploy-prod, cancel-in-progress: false }
+    if: github.ref == 'refs/heads/main'
+    environment: prod
     steps:
-      - name: Deploy de la MISMA imagen a PROD
-        shell: bash
+      - name: Disparar deploy en Render (PROD)
         env:
           HOOK_API: ${{ secrets.RENDER_HOOK_API_PROD }}
           HOOK_FRONT: ${{ secrets.RENDER_HOOK_FRONT_PROD }}
         run: |
-          IMG_API="ghcr.io/matiascarbel/ingsoft3-tp01-backend:sha-${{ github.sha }}"
-          IMG_FRONT="ghcr.io/matiascarbel/ingsoft3-tp01-frontend:sha-${{ github.sha }}"
-          curl -fsS --max-time 30 --get --data-urlencode "imgURL=$IMG_API" "$HOOK_API"
-          curl -fsS --max-time 30 --get --data-urlencode "imgURL=$IMG_FRONT" "$HOOK_FRONT"
+          curl -fsS --max-time 30 "$HOOK_API&ref=$GITHUB_SHA"
+          curl -fsS --max-time 30 "$HOOK_FRONT&ref=$GITHUB_SHA"
 
-      - name: Smoke test PROD
+      - name: Smoke test (PROD)
         shell: bash
         env:
           URL_API: https://tp01-api-prod.onrender.com
           URL_FRONT: https://tp01-front-prod.onrender.com
         run: |
+          echo "Esperando a que PROD responda..."
           for i in $(seq 1 30); do
-            if curl -fsS --max-time 10 "$URL_API/health" > /dev/null \
-               && curl -fsS --max-time 10 "$URL_API/api/pacientes" > /dev/null \
+            if curl -fsS --max-time 10 "$URL_API/health" \
+               && curl -fsS --max-time 10 "$URL_API/pacientes/" > /dev/null \
                && curl -fsS --max-time 10 "$URL_FRONT/" > /dev/null; then
-              echo "✅ PROD responde"
-              exit 0
+              echo "✅ PROD activo"; exit 0
             fi
             sleep 20
           done
-          echo "❌ PROD no respondió"; exit 1
+          echo "❌ PROD falló"; exit 1
