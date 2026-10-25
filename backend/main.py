@@ -25,7 +25,6 @@ def read_root():
 # --- PACIENTES ---
 @app.post("/pacientes/", response_model=schemas.PacienteResponse)
 def crear_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_db)):
-    # Usamos la lógica pura de validadores.py
     try:
         validar_dni(paciente.dni)
         if paciente.telefono:
@@ -46,6 +45,15 @@ def crear_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_d
 @app.get("/pacientes/", response_model=list[schemas.PacienteResponse])
 def listar_pacientes(db: Session = Depends(get_db)):
     return db.query(models.Paciente).all()
+
+@app.delete("/pacientes/{paciente_id}")
+def eliminar_paciente(paciente_id: int, db: Session = Depends(get_db)):
+    paciente = db.query(models.Paciente).filter(models.Paciente.id == paciente_id).first()
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    db.delete(paciente)
+    db.commit()
+    return {"mensaje": "Paciente eliminado con éxito"}
 
 # --- MEDICOS ---
 @app.post("/medicos/", response_model=schemas.MedicoResponse)
