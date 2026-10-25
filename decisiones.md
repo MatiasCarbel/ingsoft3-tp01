@@ -12,6 +12,19 @@
 - URL Frontend QA: [FRONTEND-QA](https://tp01-front-qa.onrender.com)
 - URL Frontend PROD: [FRONTEND-PROD](https://tp01-front-prod.onrender.com)
 
+## Enlaces del TP7
+**1. Paquetes Públicos en el Registry:**
+- Imagen Frontend: [URL PAQUETE FRONTEND](https://github.com/MatiasCarbel/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend)
+- Imagen Backend: [URL PAQUETE BACKEND](https://github.com/MatiasCarbel/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend)
+
+**2. Evidencia del Gate de Promoción (Verde/Rojo):**
+- Corrida fallida (Integración Verde / E2E Rojo): [LINK CORRIDA QUE FALLÓ](https://github.com/MatiasCarbel/ingsoft3-tp01/actions/runs/40232988577)
+- Corrida exitosa: [LINK ÚLTIMA CORRIDA EN VERDE](https://github.com/MatiasCarbel/ingsoft3-tp01/actions/runs/40234627903)
+
+**3. Entornos Vivos:**
+- URL QA Front: [https://tp01-front-qa.onrender.com](https://tp01-front-qa.onrender.com)
+- URL PROD Front: [https://tp01-front-prod.onrender.com](https://tp01-front-prod.onrender.com)
+
 # Decisiones — TP1
 
 ## 1. Sobre el conflicto de merge
@@ -142,3 +155,36 @@ Si un despliegue en PROD falla, el plan de acción es volver a la versión segur
 
 ## 9. Declaración de Uso de IA
 Utilicé IA para comprender el uso de las plantillas `.template` en Nginx (variables de entorno dinámicas), depurar errores 502/404 generados por fallos en el proxy, y estructurar sintácticamente los jobs del `ci.yml`. Todo el código y los pasos proporcionados fueron comprobados mediante pruebas manuales en la consola de Render y verificando las corridas de Actions en mi repositorio.
+
+## TP7 - Contenedores, Integración y E2E
+
+**1. Build once, deploy many:**
+El problema del TP6 era que Render reconstruía el código desde el repositorio en cada despliegue, por lo que la versión de PROD podía diferir de la testeada en QA si se resolvía una dependencia de forma distinta. Ahora la unidad de release es la imagen inmutable de Docker. Construimos una sola vez, publicamos en ghcr.io y todos los entornos ejecutan exactamente los mismos binarios verificados.
+
+**2. Estrategia de etiquetas:**
+Utilizamos la etiqueta `sha-<commit>` en el registry para garantizar trazabilidad exacta hacia el código que originó la imagen. No publicamos `latest` porque es un puntero mutable; si se redespliega `latest`, no hay certeza de qué versión exacta se está ejecutando. En Render, configuramos los servicios apuntando a un `sha-` base mediante *Existing Image*, pero el hook de nuestro pipeline actualiza la imagen en cada despliegue pasando el parámetro `imgURL`. Finalmente, el tag de git `v7.0.0` marca el commit exacto que fue promovido a Producción.
+
+**3. De la release a la imagen:**
+Con el comando `git rev-list -n1 v7.0.0` obtenemos el SHA del commit que está corriendo en Producción. Como nuestra imagen en ghcr.io se etiqueta directamente con ese mismo SHA, la correspondencia es directa y en un solo paso.
+
+**4. Verificación de ejecución (y límites del smoke test):**
+Para comprobar desde afuera que Render está ejecutando la imagen y no reconstruyendo, revisamos la pestaña *Events* del servicio. El log debe decir "Triggered via Deploy Hook" detallando explícitamente el `sha-<commit>`. El smoke test solo pregunta si la aplicación responde HTTP 200; si el despliegue falla silenciosamente, el smoke test podría dar verde interactuando con la versión anterior que sigue viva, por eso no basta para probar qué artefacto se está ejecutando.
+
+**5. Selección de flujos E2E e Integración:**
+- **E2E:** Elegimos flujos que simulan el camino crítico del usuario en el navegador: alta de paciente exitosa (crear, ver, borrar), manejo de errores (DNI inválido) y carga inicial de la UI. Dejamos fuera validaciones exhaustivas de reglas de negocio aisladas, ya que eso le corresponde a los unitarios.
+- **Integración:** Probamos el endpoint principal interactuando con la base de datos real y el rechazo HTTP 400 por la API. La regla es probar que nuestra API y su base de datos se entienden correctamente, sin simulaciones en el medio.
+
+**6. El diagnóstico del par Verde/Rojo:**
+En la corrida fallida, Integración dio Verde y E2E dio Rojo. Esto nos indicó instantáneamente, sin mirar el código, que la API y la Base de Datos estaban sanas (Fila 1 de la tabla de diagnóstico), pero que el frontend estaba enviando mal los datos o fallando en la interfaz. Si hubiéramos roto la API, Integración habría dado Rojo y E2E ni siquiera habría corrido por el bloqueo de dependencias.
+
+**7. Integración Amplia vs Estrecha:**
+Elegimos la integración *amplia* (golpeando la API de QA ya desplegada). Aunque la integración estrecha (levantar la API y BD descartable dentro del runner del CI) llega antes en la cadena, la amplia nos ahorró configuración compleja y nos permitió usar el entorno realista que el pipeline ya había levantado.
+
+**8. Cold start y Flaky tests:**
+Manejamos el cold start del free tier configurando un `timeout` de 60 segundos y 1 `retry` en `playwright.config.js`. Esto evita que un test falle solo porque el servidor tardó en despertar. Un test *flaky* es aquel que pasa a veces y a veces no; esconder esto detrás de reintentos infinitos es peligroso porque entrena al equipo a ignorar los fallos.
+
+**9. Misma imagen del front en QA y PROD:**
+Logramos que la misma imagen de frontend sirva para QA y PROD leyendo `URL_API` mediante el `default.conf.template` de Nginx. Render inyecta la variable al iniciar el contenedor, permitiendo que el binario apunte al backend correcto sin reconstruir el código.
+
+**10. Declaración de uso de IA:**
+Utilicé IA para adaptar el setup de Playwright, estructurar los comandos `curl` del CI con `imgURL`, agregar las etiquetas `aria-label` de accesibilidad en los componentes React para los selectores de E2E. Verifiqué su funcionamiento interactuando directamente con la consola de GitHub Actions y modificando selectores clave para validar los bloqueos.
