@@ -20,3 +20,9 @@ backend/__pycache__/
 
 playwright-report/
 test-results/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
