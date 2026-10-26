@@ -189,7 +189,7 @@ Logramos que la misma imagen de frontend sirva para QA y PROD leyendo `URL_API` 
 **10. Declaración de uso de IA:**
 Utilicé IA para adaptar el setup de Playwright, estructurar los comandos `curl` del CI con `imgURL`, agregar las etiquetas `aria-label` de accesibilidad en los componentes React para los selectores de E2E. Verifiqué su funcionamiento interactuando directamente con la consola de GitHub Actions y modificando selectores clave para validar los bloqueos.
 
-## TP8 - Infraestructura como Código (IaC)
+# TP8 - Infraestructura como Código (IaC)
 
 1. **Riel elegido y versiones fijadas:**
 Utilizamos el riel canónico (Terraform local contra Neon y Render). Fijamos estrictamente las versiones de los providers (`kislerdm/neon` en `0.18.0` y `render-oss/render` en `1.9.1`) porque las APIs de los proveedores mutan y no declarar la versión podría romper nuestro `init` o el despliegue el día de mañana.
@@ -208,3 +208,10 @@ El `plan` lee el estado, no la cuenta completa de los proveedores. Si alguien el
 
 6. **Declaración de uso de IA:**
 Utilicé IA para estructurar el formato de los bloques HCL respetando la documentación de los providers `neon` y `render`y formatear los comandos de la CLI de Terraform. Verifiqué personalmente la creación, navegación y posterior destrucción del entorno efímero mediante mi terminal local.
+
+# TP9 - DevSecOps, Observabilidad y Feedback Continuo
+
+- **Dependabot:** Mergeé el PR de actualización de la dependencia "chore(deps-dev): bump globals from 15.15.0 to 17.13.0 in /frontend" porque todos los checks de integración continua dieron verde, garantizando que no rompe el sistema.
+- **UptimeRobot:** El monitor tardó 5 minutos con 20 segundos aproximadamente en avisarme de la caída al suspender el servicio en Render. 
+- **Sentry:** La operación más usada fue GET pacientes y la más lenta fue POST turno con un P95 de 1.83S.
+- **Uso de IA:** Se utilizó IA para entender la configuración de Sentry, UptimeRobot, dependabot.yml y los comandos Git. Todo fue validado en los respectivos dashboards (Sentry/Render/UptimeRobot).
