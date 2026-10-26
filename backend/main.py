@@ -1,3 +1,4 @@
+import os
 import sentry_sdk
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +10,7 @@ from validadores import validar_dni, validar_telefono, validar_fecha_turno, Vali
 
 # Inicialización de Sentry (Observabilidad TP9)
 sentry_sdk.init(
-    dsn="https://4d195ac2d0721b4cc23ecfb9fd613541@o4512323576135680.ingest.us.sentry.io/4512323611000832",
+    dsn=os.getenv("SENTRY_DSN"),
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
 )
