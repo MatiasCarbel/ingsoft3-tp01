@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -5,6 +6,13 @@ from datetime import datetime
 import models, schemas
 from database import engine, get_db
 from validadores import validar_dni, validar_telefono, validar_fecha_turno, ValidacionError
+
+# Inicialización de Sentry (Observabilidad TP9)
+sentry_sdk.init(
+    dsn="https://4d195ac2d0721b4cc23ecfb9fd613541@o4512323576135680.ingest.us.sentry.io/4512323611000832",
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -21,6 +29,11 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"mensaje": "API de Gestión de Clínica funcionando 🚀"}
+
+# --- ENDPOINT FALLA TP9 (Simulación de incidente) ---
+@app.get("/api/falla")
+def simular_falla():
+    raise HTTPException(status_code=500, detail="Falla de prueba del TP9 para Sentry")
 
 # --- PACIENTES ---
 @app.post("/pacientes/", response_model=schemas.PacienteResponse)
@@ -109,6 +122,7 @@ def eliminar_turno(turno_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"mensaje": "Turno eliminado con éxito"}
 
-@app.get("/health")
+# --- HEALTH CHECK (Acepta HEAD para UptimeRobot) ---
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok"}
