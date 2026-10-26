@@ -188,3 +188,23 @@ Logramos que la misma imagen de frontend sirva para QA y PROD leyendo `URL_API` 
 
 **10. Declaración de uso de IA:**
 Utilicé IA para adaptar el setup de Playwright, estructurar los comandos `curl` del CI con `imgURL`, agregar las etiquetas `aria-label` de accesibilidad en los componentes React para los selectores de E2E. Verifiqué su funcionamiento interactuando directamente con la consola de GitHub Actions y modificando selectores clave para validar los bloqueos.
+
+## TP8 - Infraestructura como Código (IaC)
+
+1. **Riel elegido y versiones fijadas:**
+Utilizamos el riel canónico (Terraform local contra Neon y Render). Fijamos estrictamente las versiones de los providers (`kislerdm/neon` en `0.18.0` y `render-oss/render` en `1.9.1`) porque las APIs de los proveedores mutan y no declarar la versión podría romper nuestro `init` o el despliegue el día de mañana.
+
+2. **Declaración del entorno preprod (Aislamiento total):**
+Decidimos declarar únicamente un entorno nuevo (`preprod`), dejando QA y PROD intactos y fuera de la gestión de este código. Esto nos permite tener un entorno de pruebas idéntico a producción que podemos destruir (`terraform destroy`) y recrear (`terraform apply`) a demanda, esquivando los límites de cuota (750hs mensuales) del free tier de Render que nos habrían suspendido la cuenta entera.
+
+3. **Derivación dinámica de conexiones:**
+Ninguna credencial o URL se copió manualmente en el código. La cadena de conexión a la base de datos se deriva de los atributos inyectados por el provider de Neon (`database_host`, `password`, etc.), y Nginx lee dinámicamente la URL de la API porque utilizamos `render_web_service.api.url` como variable de entorno del frontend. Esto elimina el clásico error humano de apuntar un front de QA a una base de PROD.
+
+4. **El estado y su aislamiento:**
+El estado (`terraform.tfstate`) no se subió al repositorio porque contiene atributos sensibles (contraseñas de la base de datos) en texto plano. Quedó aislado en mi máquina local protegido por el `.gitignore`. Comprendo que, en un equipo de trabajo real, este estado debe migrarse a un *remote backend* (como un bucket S3 con bloqueo) para que todos comparen contra la misma memoria y evitar pisar la infraestructura del otro.
+
+5. **Drift y los límites de Terraform:**
+El `plan` lee el estado, no la cuenta completa de los proveedores. Si alguien elimina mi base de `preprod` a mano, Terraform lo detecta y lo recrea en el próximo `apply` (drift detectado). Sin embargo, si alguien crea una base de datos nueva en Neon por fuera de mi código, el plan dirá "No changes" porque Terraform solo vigila los recursos que él mismo declaró.
+
+6. **Declaración de uso de IA:**
+Utilicé IA para estructurar el formato de los bloques HCL respetando la documentación de los providers `neon` y `render`y formatear los comandos de la CLI de Terraform. Verifiqué personalmente la creación, navegación y posterior destrucción del entorno efímero mediante mi terminal local.
